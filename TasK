@@ -1,0 +1,487 @@
+/*
+Name: sreenivasulu Gorre
+Date: 31/10/2019
+Comments: this class is using to call external service to get data
+ */
+public class Calloutcontroller {
+    
+    public List<PhotosWrappercls> PhotosWrapperclsList{get;set;}
+    
+    public string getperformcallout(){
+        //public PhotosWrappercls getperformcallout(){
+        PhotosWrapperclsList = new List<PhotosWrappercls>();
+        
+        HttpRequest req = new HttpRequest();
+        
+        HttpResponse res = new HttpResponse();
+        
+        Http http = new Http();
+        
+        req.setEndpoint('https://jsonplaceholder.typicode.com/photos');
+        
+        req.setMethod('GET');
+        
+        res = http.send(req);
+        system.debug('status'+res.getstatusCode());
+        string responseresult;
+        if(res.getstatusCode() == 200 && res.getbody() != null){
+                       responseresult=res.getbody();
+        }
+       
+        return responseresult;
+        
+    }
+    
+}
+
+********************************************************************
+apex controller
+********************************************************************
+/*
+Name: sreenivasulu Gorre
+Date: 31/10/2019
+Comments: this class is using to pass external data to UI
+*/
+public class LightningPhotoDataTableController {
+   
+    @AuraEnabled
+    public static string fetchData1() {
+        Calloutcontroller cntlr=new Calloutcontroller();
+       string result=cntlr.getperformcallout();
+        return result;
+    }
+    @AuraEnabled
+    public static void sendingEmail(string lstrecords)
+    {
+        system.debug('data'+lstrecords);
+          if(lstrecords !=null){
+            
+            Messaging.SingleEmailMessage semail = new Messaging.SingleEmailMessage();
+            String[] sendingTo = new String[]{'sreenivasulug501@gmail.com'}; 
+                semail.setToAddresses(sendingTo); 
+            // String[] sendingToBccAdd = new String[]{'sreenivasulug501@gmail.com'}; 
+            //  semail.setBccAddresses(sendingToBccAdd); 
+            // String[] sendingTocAdd = new String[]{'sreenivasulug501@gmail.com'}; 
+            //  semail.setCcAddresses(sendingTocAdd); 
+            semail.setSubject('Single Email message Example'+lstrecords); 
+            semail.setPlainTextBody('Selected records'+lstrecords); 
+            Messaging.sendEmail(new Messaging.SingleEmailMessage[] {semail}); 
+            
+            
+        }
+        
+    } 
+    
+}
+******************************************************************8**********************************************************
+
+aura component
+
+********************************************************************************************************************************
+<!-- 
+Component name: Photolisttablecomponent
+Name: sreenivasulu gorre
+Date :31/10/2109
+-->
+
+<aura:component implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"
+                access="global" 
+                controller="LightningPhotoDataTableController">
+    <!-- call doInit method on component load -->
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    
+    <!-- aura attributes to store data/values --> 
+    <aura:attribute name="listOfAllAccounts" type="list"/> 
+    <aura:attribute name="serachresult" type="list"/> 
+    <aura:attribute name="PaginationList" type="list"/> 
+    <aura:attribute name="selectedCount" type="integer" default="0"
+                    description="selected Records Count"/>
+    <aura:attribute name="startPage" type="Integer" />
+    <aura:attribute name="endPage" type="Integer"/>
+    <aura:attribute name="totalRecordsCount" type="Integer"/>
+    <aura:attribute name="pageSize" type="Integer" default="4"
+                    description="number of records to be display on per page"/>
+    <aura:attribute name="currentPage" type="integer" default="1"/>
+    <aura:attribute name="totalPagesCount" type="integer"/>
+    <aura:attribute name="bNoRecordsFound" type="boolean"/>
+    
+    
+    <aura:if isTrue="{!v.bNoRecordsFound}">
+        <!--display error message if there is no records available -->
+        <div class="slds-notify slds-notify_alert slds-theme_alert-texture slds-theme_info" role="alert">
+            <span class="slds-assistive-text">error</span>
+            <h2>No record found.</h2>
+        </div>
+        <aura:set attribute="else">
+            <!-- lightning:button to get selected rows data -->
+            
+            <span><p class="slds-L-around_small">
+                <span class="slds-badge slds-badge_lightest" style="display:inline-block">
+                    <lightning:input  onchange="{!c.doInit}" type="search" label="Searh" variant="label-hidden" placeholder="Enter search term" aura:id="SearchBox"/>
+                </span>
+                </p>
+            </span>
+            
+            <!-- data table start onchange="{!c.init}"-->  
+            <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                <thead>
+                    <tr class="slds-text-title_caps">
+                        
+                        <!--header checkbox for select all-->
+                        <th style="width:3.25rem;" class="slds-text-align_right">
+                            <div class="slds-form-element">
+                                <div class="slds-form-element__control">
+                                    <label class="slds-checkbox">
+                                        <ui:inputCheckbox disabled="{!v.totalRecordsCount == 0}"
+                                                          aura:id="selectAllId"
+                                                          change="{!c.selectAllCheckbox}"/>
+                                        <span class="slds-checkbox_faux"></span>
+                                        <span class="slds-form-element__label"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Name">Id</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Phone">Title</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Type">albumId</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Type">Url</div>
+                        </th>
+                        <th scope="col">
+                            <div class="slds-truncate" title="Type">ThumbnailUrl</div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <aura:iteration items="{!v.PaginationList}" var="obj">
+                        <tr>
+                            <th scope="row" class="slds-text-align_right" style="width:3.25rem;">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <label class="slds-checkbox">
+                                            <ui:inputCheckbox text="{!obj.Id}"
+                                                              value="{!obj.isChecked}"
+                                                              change="{!c.checkboxSelect}"/>
+                                            <span class="slds-checkbox_faux"></span>
+                                            <span class="slds-form-element__label text"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </th>
+                            <th scope="row">
+                                <div class="slds-truncate" title="{!obj.id}">
+                                    {!obj.id}
+                                </div>
+                            </th> 
+                            <th scope="row">
+                                <div class="slds-truncate" title="{!obj.title}">
+                                    {!obj.title}
+                                    
+                                </div>
+                            </th>
+                            <th scope="row">
+                                <div class="slds-truncate" title="{!obj.albumId}">
+                                    {!obj.albumId}
+                                </div>
+                            </th>
+                            <th scope="row">
+                                <div class="slds-truncate" title="{!obj.url}">
+                                    {!obj.url}
+                                </div>
+                            </th>
+                            <th scope="row">
+                                <div class="slds-truncate" title="{!obj.thumbnailUrl}">
+                                    <img src="{!obj.thumbnailUrl}" alt="..." class="img-responsive"  style="width:30% !important"/>
+                                </div>
+                            </th>
+                        </tr>
+                    </aura:iteration>
+                </tbody>
+            </table>
+            <!-- DataTable End -->
+            <br/>
+            <!--  Pagination Buttons Start -->
+            <div class="slds-align_absolute-center">         
+                <lightning:button label="Previous"
+                                  disabled="{!v.startPage == 0}"  
+                                  onclick="{!c.navigation}"
+                                  variant="brand"
+                                  iconName="utility:back"
+                                  name="previous"/>
+                
+                <span class="slds-badge slds-badge_lightest"
+                      style="margin-right: 10px;margin-left: 10px;">
+                    Page {!v.currentPage} out of {!v.totalPagesCount}
+                </span>
+                
+                <lightning:button label="Next"
+                                  disabled="{!(v.endPage + 1) >= v.totalRecordsCount}" 
+                                  onclick="{!c.navigation}"
+                                  variant="brand"
+                                  iconName="utility:forward"
+                                  iconPosition="right"
+                                  name="next"/>
+                <!-- display total record and selected record count -->    
+                <p class="slds-m-around_small">
+                    <span class="slds-badge slds-badge_lightest" style="display:inline-block">
+                        Total Records : {!v.totalRecordsCount} 
+                    </span>
+                </p>
+                <div class="slds-clearfix slds-m-around_small">
+                    <div class="slds-clearfix">
+                        <div class="slds-float_right">
+                            <lightning:button variant="destructive"
+                                              label="Get Selected Records"
+                                              onclick="{! c.getSelectedRecords }"
+                                              disabled="{!v.selectedCount == 0}"/>
+                        </div>
+                    </div>
+                </div>
+            </div>  
+            <!--  Pagination Buttons End -->
+            
+        </aura:set> 
+    </aura:if>
+</aura:component>
+
+__________________________________________________________________________________________________________________________________
+
+aura Js controller
+********************************************************************************************************************************
+({
+    doInit: function(component, event, helper) {
+        
+        helper.doInitHelper(component, event);
+    },
+    
+    /* javaScript function for pagination */
+    navigation: function(component, event, helper) {
+        var sObjectList = component.get("v.listOfAllAccounts");
+        var end = component.get("v.endPage");
+        var start = component.get("v.startPage");
+        var pageSize = component.get("v.pageSize");
+        var whichBtn = event.getSource().get("v.name");
+        // check if whichBtn value is 'next' then call 'next' helper method
+        if (whichBtn == 'next') {
+            component.set("v.currentPage", component.get("v.currentPage") + 1);
+            helper.next(component, event, sObjectList, end, start, pageSize);
+        }
+        // check if whichBtn value is 'previous' then call 'previous' helper method
+        else if (whichBtn == 'previous') {
+            component.set("v.currentPage", component.get("v.currentPage") - 1);
+            helper.previous(component, event, sObjectList, end, start, pageSize);
+        }
+    },
+    
+    selectAllCheckbox: function(component, event, helper) {
+        var selectedHeaderCheck = event.getSource().get("v.value");
+        var updatedAllRecords = [];
+        var updatedPaginationList = [];
+        var listOfAllAccounts = component.get("v.listOfAllAccounts");
+        // var PaginationList = component.get("v.PaginationList");
+        var PaginationList = listOfAllAccounts;
+        // play a for loop on all records list 
+        for (var i = 0; i < listOfAllAccounts.length; i++) {
+            // check if header checkbox is 'true' then update all checkbox with true and update selected records count
+            // else update all records with false and set selectedCount with 0  
+            if (selectedHeaderCheck == true) {
+                listOfAllAccounts[i].isChecked = true;
+                component.set("v.selectedCount", listOfAllAccounts.length);
+            } else {
+                listOfAllAccounts[i].isChecked = false;
+                component.set("v.selectedCount", 0);
+            }
+            updatedAllRecords.push(listOfAllAccounts[i]);
+        }
+        // update the checkbox for 'PaginationList' based on header checbox 
+        for (var i = 0; i < PaginationList.length; i++) {
+            if (selectedHeaderCheck == true) {
+                PaginationList[i].isChecked = true;
+            } else {
+                PaginationList[i].isChecked = false;
+            }
+            updatedPaginationList.push(PaginationList[i]);
+        }
+        component.set("v.listOfAllAccounts", updatedAllRecords);
+        component.set("v.PaginationList", updatedPaginationList);
+    },
+    
+    checkboxSelect: function(component, event, helper) {
+        // on each checkbox selection update the selected record count 
+        var selectedRec = event.getSource().get("v.value");
+        var getSelectedNumber = component.get("v.selectedCount");
+        if (selectedRec == true) {
+            getSelectedNumber++;
+        } else {
+            getSelectedNumber--;
+            component.find("selectAllId").set("v.value", false);
+        }
+        component.set("v.selectedCount", getSelectedNumber);
+        // if all checkboxes are checked then set header checkbox with true   
+        if (getSelectedNumber == component.get("v.totalRecordsCount")) {
+            component.find("selectAllId").set("v.value", true);
+        }
+    },
+    
+    getSelectedRecords: function(component, event, helper) {
+        var allRecords = component.get("v.listOfAllAccounts");
+        var selectedRecords = [];
+        for (var i = 0; i < allRecords.length; i++) {
+            if (allRecords[i].isChecked) {
+                selectedRecords.push(allRecords[i]);
+            }
+        }
+        
+        //alert('selectedRecords'+JSON.stringify(selectedRecords));
+        // var vsls=JSON.stringify(selectedRecords);
+        var action = component.get("c.sendingEmail");
+        action.setParams({
+            "lstrecords":JSON.stringify(selectedRecords)
+        });
+        
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            
+            if (state === "SUCCESS"){
+                alert('sent mail');
+                var oRes = response.getReturnValue();
+                var resultval=JSON.parse(response.getReturnValue());
+                
+            }else
+            {
+                alert('erorr');
+            }
+        });
+        $A.enqueueAction(action);  
+        //$A.enqueueAction(component.get("c.sendingEmailtpUser"));
+    },
+    
+})
+*********************************************************************************************
+helper
+******************************************************************************************
+
+({
+    /* doInitHelper funcation to fetch all records, and set attributes value on component load */
+    doInitHelper : function(component,event){ 
+        var action = component.get("c.fetchData1");
+        action.setCallback(this, function(response) {
+            var state = response.getState();
+            
+            debugger;
+            if (state === "SUCCESS"){
+                var oRes = response.getReturnValue();
+                var resultval=JSON.parse(response.getReturnValue());
+                //var citrus = resultval.slice(0, 5000);
+                var sinput= component.find('SearchBox').get("v.value");
+                //alert(sinput);
+                if(sinput !=null && sinput!=''){
+                    for(var i=0;resultval.length>0;i++){
+                        if (resultval[i].title == sinput)
+                            // if(resultval[i].title.includes(sinput))
+                        {
+                            
+                            component.set('v.serachresult', resultval[i]);
+                            break;
+                        }
+                    }}
+                
+                // alert(citrus.length+'--'+resultval.length);
+                if(resultval.length > 0){
+                    var srch=component.get('v.serachresult');
+                   // alert(JSON.stringify(srch));
+                    //$A.get('e.force:refreshView').fire();
+                    if(srch.length == 0 || srch ==''){
+                        component.set('v.listOfAllAccounts', resultval);    
+                    }else
+                    {
+                        component.set('v.listOfAllAccounts', srch); 
+                    }
+                    
+                    
+                    //alert('result'+JSON.stringify(component.get('v.listOfAllAccounts').length));
+                    var pageSize = component.get("v.pageSize");
+                    var totalRecordsList = resultval;
+                    var totalLength = totalRecordsList.length ;
+                    component.set("v.totalRecordsCount", totalLength);
+                    component.set("v.startPage",0);
+                    component.set("v.endPage",pageSize-1);
+                    
+                    var PaginationLst = [];
+                    for(var i=0; i < pageSize; i++){
+                        if(component.get("v.listOfAllAccounts").length > i){
+                            PaginationLst.push(resultval[i]);    
+                        } 
+                    }
+                    component.set('v.PaginationList', PaginationLst);
+                    component.set("v.selectedCount" , 0);
+                    //use Math.ceil() to Round a number upward to its nearest integer
+                    component.set("v.totalPagesCount", Math.ceil(totalLength / pageSize));    
+                }else{
+                    // if there is no records then display message
+                    component.set("v.bNoRecordsFound" , true);
+                } 
+            }
+            else{
+                alert('Error...');
+            }
+        });
+        $A.enqueueAction(action);  
+    },
+    // navigate to next pagination record set   
+    next : function(component,event,sObjectList,end,start,pageSize){
+        var Paginationlist = [];
+        var counter = 0;
+        for(var i = end + 1; i < end + pageSize + 1; i++){
+            if(sObjectList.length > i){ 
+                if(component.find("selectAllId").get("v.value")){
+                    Paginationlist.push(sObjectList[i]);
+                }else{
+                    Paginationlist.push(sObjectList[i]);  
+                }
+            }
+            counter ++ ;
+        }
+        start = start + counter;
+        end = end + counter;
+        component.set("v.startPage",start);
+        component.set("v.endPage",end);
+        component.set('v.PaginationList', Paginationlist);
+    },
+    // navigate to previous pagination record set   
+    previous : function(component,event,sObjectList,end,start,pageSize){
+        var Paginationlist = [];
+        var counter = 0;
+        for(var i= start-pageSize; i < start ; i++){
+            if(i > -1){
+                if(component.find("selectAllId").get("v.value")){
+                    Paginationlist.push(sObjectList[i]);
+                }else{
+                    Paginationlist.push(sObjectList[i]); 
+                }
+                counter ++;
+            }else{
+                start++;
+            }
+        }
+        start = start - counter;
+        end = end - counter;
+        component.set("v.startPage",start);
+        component.set("v.endPage",end);
+        component.set('v.PaginationList', Paginationlist);
+    },
+})
+##########################################################
+<aura:application extends="force:slds">
+    <c:photosdisplaycmp/>
+   
+</aura:application>
+########################
+
+
